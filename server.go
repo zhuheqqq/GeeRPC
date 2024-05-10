@@ -2,10 +2,12 @@ package GeeRPC
 
 import (
 	"encoding/json"
+	"fmt"
 	"geerpc/codec"
 	"io"
 	"log"
 	"net"
+	"reflect"
 	"sync"
 )
 
@@ -41,7 +43,7 @@ func (server *Server) Accept(lis net.Listener) {
 			log.Println("rpc server: accept error:", err)
 			return
 		}
-		go srever.ServeConn(conn)
+		go server.ServeConn(conn)
 	}
 }
 
@@ -88,4 +90,51 @@ func (server *Server) serveCodec(cc codec.Codec) {
 	}
 	wg.Wait()
 	_ = cc.Close()
+}
+
+type request struct {
+	h            *codec.Header //header of request
+	argv, replyv reflect.Value //argv and replyv of request
+}
+
+func (server *Server) readRequestHeader(cc codec.Codec) (*codec.Header, error) {
+	var h codec.Header
+	if err := cc.ReadHeader(&h); err != nil {
+		if err != io.EOF && err != io.ErrUnexpectedEOF {
+			log.Println("rpc server: read header error:", err)
+		}
+		return nil, err
+	}
+	return &h, nil
+}
+
+// 读取请求
+func (server *Server) readRequest(cc codec.Codec) (*request, error) {
+	h, err := server.readRequestHeader(cc)
+	if err != nil {
+		return nil, err
+	}
+	req := &request{h: h}
+	req.argv = reflect.New(reflect.TypeOf(""))
+	if err = cc.ReadBody(req.argv.Interface()); err != nil {
+		log.Println("rpc server: read argv err:", err)
+	}
+	return req, nil
+}
+
+// 回复请求
+func (server *Server) sendResponse(cc codec.Codec, h *codec.Header, body interface{}, sending *sync.Mutex) {
+	sending.Lock()
+	defer sending.Unlock()
+	if err := cc.Write(h, body); err != nil {
+		log.Println("rpc server: write response error:", err)
+	}
+}
+
+// 处理请求
+func (server *Server) handleRequest(cc codec.Codec, req *request, sending *sync.Mutex, wg *sync.WaitGroup) {
+	defer wg.Done()
+	log.Println(req.h, req.argv.Elem())
+	req.replyv = reflect.ValueOf(fmt.Sprintf("geerpc resp %d", req.h.Seq))
+	server.sendResponse(cc, req.h, req.replyv.Interface(), sending)
 }
