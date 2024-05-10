@@ -196,7 +196,7 @@ func (client *Client) send(call *Call) {
 	}
 }
 
-func (client *Client) Go(serviceMethod string, args, replay interface{}, done chan *Call) *Call {
+func (client *Client) Go(serviceMethod string, args, reply interface{}, done chan *Call) *Call {
 	if done == nil {
 		done = make(chan *Call, 10)
 	} else if cap(done) == 0 {
