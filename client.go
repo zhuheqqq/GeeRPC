@@ -58,6 +58,7 @@ func (client *Client) IsAvailable() bool {
 	return !client.shutdown && !client.closing
 }
 
+// 注册rpc调用
 func (client *Client) registerCall(call *Call) (uint64, error) {
 	client.mu.Lock()
 	defer client.mu.Unlock()
@@ -179,11 +180,12 @@ func dialTimeout(f newClientFunc, network, address string, opts ...*Option) (cli
 			_ = conn.Close()
 		}
 	}()
-	ch := make(chan clientResult)
+	ch := make(chan clientResult) //创建无缓冲的通道ch
 	go func() {
-		client, err := f(conn, opt)
-		ch <- clientResult{client: client, err: err}
+		client, err := f(conn, opt)                  //创建客户端实例
+		ch <- clientResult{client: client, err: err} //将结果封装到结构体中发送到通道
 	}()
+	//若未设置超时时间，则直接从通道接收结果
 	if opt.ConnectTimeout == 0 {
 		result := <-ch
 		return result.client, result.err
@@ -212,7 +214,7 @@ func (client *Client) send(call *Call) {
 		return
 	}
 
-	client.header.ServiceMectod = call.ServiceMethod
+	client.header.ServiceMethod = call.ServiceMethod
 	client.header.Seq = seq
 	client.header.Error = ""
 
@@ -226,9 +228,9 @@ func (client *Client) send(call *Call) {
 }
 
 func (client *Client) Go(serviceMethod string, args, reply interface{}, done chan *Call) *Call {
-	if done == nil {
+	if done == nil { //如果调用放没有提供done通道
 		done = make(chan *Call, 10)
-	} else if cap(done) == 0 {
+	} else if cap(done) == 0 { //如果调用方提供的done通道缓冲区为0
 		log.Panic("rpc client: done channel is unbuffered")
 	}
 	call := &Call{
@@ -243,7 +245,7 @@ func (client *Client) Go(serviceMethod string, args, reply interface{}, done cha
 
 // 增加客户端超时处理机制
 func (client *Client) Call(ctx context.Context, serviceMethod string, args, reply interface{}) error {
-	call := client.Go(serviceMethod, args, reply, make(chan *Call, 1))
+	call := client.Go(serviceMethod, args, reply, make(chan *Call, 1)) //发起异步rpc调用，返回一个call对象
 	select {
 	case <-ctx.Done():
 		client.removeCall(call.Seq)

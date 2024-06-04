@@ -59,6 +59,8 @@ func Accept(lis net.Listener) {
 	DefaultServer.Accept(lis)
 }
 
+// ServeConn runs the server on a single connection.
+// ServeConn blocks, serving the connection until the client hangs up.
 func (server *Server) ServeConn(conn io.ReadWriteCloser) {
 	defer func() { _ = conn.Close() }()
 	var opt Option
@@ -125,7 +127,7 @@ func (server *Server) readRequest(cc codec.Codec) (*request, error) {
 		return nil, err
 	}
 	req := &request{h: h}
-	req.svc, req.mtype, err = server.findService(h.ServiceMectod)
+	req.svc, req.mtype, err = server.findService(h.ServiceMethod)
 	if err != nil {
 		return req, err
 	}

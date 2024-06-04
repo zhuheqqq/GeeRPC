@@ -62,6 +62,6 @@ func TestClient_Call(t *testing.T) {
 		})
 		var reply int
 		err := client.Call(context.Background(), "Bar.Timeout", 1, &reply)
-		_assert(err != nil && strings.Contains(err.Error(), "connect timeout"), "expect a timeout error")
+		_assert(err != nil && strings.Contains(err.Error(), "handle timeout"), "expect a timeout error")
 	})
 }
