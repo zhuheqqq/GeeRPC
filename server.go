@@ -221,8 +221,8 @@ func (server *Server) findService(serviceMethod string) (svc *service, mtype *me
 
 const (
 	connected        = "200 Connected to Gee RPC"
-	defaultRPCPath   = "/_geeprc_"
-	defaultDebugPath = "/debug/geerpc"
+	defaultRPCPath   = "/_GeeRPC_"
+	defaultDebugPath = "/debug/GeeRPC"
 )
 
 // 处理http请求
@@ -245,6 +245,8 @@ func (server *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 // 将默认的rpc路径和server结构体绑定
 func (server *Server) HandleHTTP() {
 	http.Handle(defaultRPCPath, server)
+	http.Handle(defaultDebugPath, debugHTTP{server})
+	log.Println("rpc server debug path:", defaultDebugPath)
 }
 
 func HandleHTTP() {
